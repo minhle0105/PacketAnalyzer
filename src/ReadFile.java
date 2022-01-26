@@ -45,10 +45,10 @@ public class ReadFile {
         else if (protocol == 17) {
             System.out.println("IP: \tProtocol = " + protocol + " (UDP)");
         }
-        System.out.println("IP : \tHeader checksum = " + headerCheckSum);
-        System.out.println("IP : \tSource Address = " + source);
-        System.out.println("IP : \tDestination Address = " + destination);
-        System.out.println("IP : \t");
+        System.out.println("IP: \tHeader checksum = " + headerCheckSum);
+        System.out.println("IP: \tSource Address = " + source);
+        System.out.println("IP: \tDestination Address = " + destination);
+        System.out.println("IP: \t");
     }
 
     private static void printUdpHeader(String source, String destination, int length, String checksum, String[] UDPData) {
@@ -126,11 +126,23 @@ public class ReadFile {
     }
 
     private static void printICMPHeader(int type, int code, String checksum) {
-
+        System.out.println("ICMP: \t ----ICMP Header----");
+        System.out.println("ICMP: \t");
+        System.out.println("ICMP: \tType = " + type);
+        System.out.println("ICMP: \tCode = " + code);
+        System.out.println("ICMP: \tChecksum = " + checksum);
+        System.out.println("ICMP: \t");
     }
 
     public static void main(String[] args) throws IOException {
-        String filePath = args[0];
+        String filePath = "";
+        try {
+            filePath = args[0];
+        }
+        catch (Exception e) {
+            System.out.println("File not found.");
+        }
+
         Path path = Paths.get(filePath);
         byte[] fileContents =  Files.readAllBytes(path);
         String[] data = new String[fileContents.length];
@@ -233,7 +245,14 @@ public class ReadFile {
             }
             printTcpHeader(TCPSource, TCPDest, sequenceNumber, acknowledgementNumber, dataOffset, tcpFlag, window, checkSum, urgentPointer, tcpData);
         }
-
+        else if (protocol == 1) {
+            int type = Integer.parseInt(data[34], 16);
+            int code = Integer.parseInt(String.valueOf(data[35].charAt(0)), 16);
+            String checkSum = data[35].charAt(1) + data[36] + data[37];
+            printICMPHeader(type, code, checkSum);
+        }
+        else {
+            System.out.println("----Unknown Protocol----");
+        }
     }
 }
-// 45 00 00 3d 54 33 40 00 40 11 9e ec 81 15 42 55 81 1503 11
