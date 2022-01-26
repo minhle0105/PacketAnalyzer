@@ -134,125 +134,124 @@ public class ReadFile {
         System.out.println("ICMP: \t");
     }
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
         String filePath = "";
         try {
             filePath = args[0];
+            Path path = Paths.get(filePath);
+            byte[] fileContents =  Files.readAllBytes(path);
+            String[] data = new String[fileContents.length];
+            int count = 0;
+            for (byte b : fileContents) {
+                String s = Integer.toHexString((b & 0xff)+256).substring(1);
+                data[count++] = s;
+            }
+            int packetSize = data.length;
+            StringBuilder destination = new StringBuilder();
+            StringBuilder source = new StringBuilder();
+            for (int i = 0; i < 6; i++) {
+                if (i != 5) {
+                    destination.append(data[i]).append(":");
+                }
+                else {
+                    destination.append(data[i]);
+                }
+            }
+            for (int i = 6; i < 12; i++) {
+                if (i != 11) {
+                    source.append(data[i]).append(":");
+                }
+                else {
+                    source.append(data[i]);
+                }
+            }
+
+            int version = Integer.parseInt(String.valueOf(data[14].charAt(0)));
+            int headerLength = Integer.parseInt(String.valueOf(data[14].charAt(1))) * 4;
+            int totalLength = Integer.parseInt(data[16] + data[17], 16);
+            String typeOfService = "0x" + data[15];
+            String etherType = data[12] + data[13];
+            String identification = Integer.parseInt(data[18] + data[19], 16) + "";
+            String flags = "0x" + Integer.parseInt(data[20], 16);
+            int fragmentOffset = Integer.parseInt(data[21], 16);
+            int timeToLive = Integer.parseInt(data[22], 16);
+            int protocol = Integer.parseInt(data[23], 16);
+            String headerChecksum = "0x" + data[24] + data[25];
+            StringBuilder src = new StringBuilder();
+            StringBuilder dst = new StringBuilder();
+            for (int i = 26; i < 30; i++) {
+                if (i != 29) {
+                    src.append(Integer.parseInt(data[i], 16)).append(".");
+                }
+                else {
+                    src.append(Integer.parseInt(data[i], 16));
+                }
+            }
+            for (int i = 30; i < 34; i++) {
+                if (i != 33) {
+                    dst.append(Integer.parseInt(data[i], 16)).append(".");
+                }
+                else {
+                    dst.append(Integer.parseInt(data[i], 16));
+                }
+            }
+
+            printEther(packetSize, destination.toString(), source.toString(), etherType);
+            printIpHeader(version, headerLength, typeOfService, totalLength, identification, flags, fragmentOffset, timeToLive, protocol, headerChecksum, src.toString(), dst.toString());
+            if (protocol == 17) {
+                String UDPSource = Integer.parseInt(data[34] + data[35], 16) + "";
+                String UDPDest = Integer.parseInt(data[36] + data[37], 16) + "";
+                int length = Integer.parseInt(data[38] + data[39], 16);
+                String UDPChecksum = "0x" + data[40] + data[41];
+                String[] UDPData;
+                if (34 + 64 > data.length) {
+                    UDPData = Arrays.copyOfRange(data, 34, data.length);
+                }
+                else {
+                    UDPData = Arrays.copyOfRange(data, 34, 34 + 64);
+                }
+                printUdpHeader(UDPSource, UDPDest, length, UDPChecksum, UDPData);
+
+            }
+            else if (protocol == 6) {
+                String TCPSource = Integer.parseInt(data[34] + data[35], 16) + "";
+                String TCPDest = Integer.parseInt(data[36] + data[37], 16) + "";
+                StringBuilder sequenceNumberS = new StringBuilder();
+                for (int i = 38; i < 42; i++) {
+                    sequenceNumberS.append(data[i]);
+                }
+                String sequenceNumber = Integer.parseInt(sequenceNumberS.toString(), 16) + "";
+                StringBuilder acknowledgementNumberS = new StringBuilder();
+                for (int i = 42; i < 46; i++) {
+                    acknowledgementNumberS.append(data[i]);
+                }
+                String acknowledgementNumber = acknowledgementNumberS.toString();
+                int dataOffset = Integer.parseInt(String.valueOf(data[46].charAt(0)));
+                String tcpFlag = data[46].charAt(1) + data[47];
+                String window = Integer.parseInt(data[48] + data[49], 16) + "";
+                String checkSum = "0x" + data[50] + data[51];
+                int urgentPointer = Integer.parseInt(data[52],16);
+                String[] tcpData;
+                if (34 + 64 > data.length) {
+                    tcpData = Arrays.copyOfRange(data, 34, data.length);
+                }
+                else {
+                    tcpData = Arrays.copyOfRange(data, 34, 34 + 64);
+                }
+                printTcpHeader(TCPSource, TCPDest, sequenceNumber, acknowledgementNumber, dataOffset, tcpFlag, window, checkSum, urgentPointer, tcpData);
+            }
+            else if (protocol == 1) {
+                int type = Integer.parseInt(data[34], 16);
+                int code = Integer.parseInt(String.valueOf(data[35].charAt(0)), 16);
+                String checkSum = data[35].charAt(1) + data[36] + data[37];
+                printICMPHeader(type, code, checkSum);
+            }
+            else {
+                System.out.println("----Unknown Protocol----");
+            }
         }
         catch (Exception e) {
             System.out.println("File not found.");
-        }
-
-        Path path = Paths.get(filePath);
-        byte[] fileContents =  Files.readAllBytes(path);
-        String[] data = new String[fileContents.length];
-        int count = 0;
-        for (byte b : fileContents) {
-            String s = Integer.toHexString((b & 0xff)+256).substring(1);
-            data[count++] = s;
-        }
-        int packetSize = data.length;
-        StringBuilder destination = new StringBuilder();
-        StringBuilder source = new StringBuilder();
-        for (int i = 0; i < 6; i++) {
-            if (i != 5) {
-                destination.append(data[i]).append(":");
-            }
-            else {
-                destination.append(data[i]);
-            }
-        }
-        for (int i = 6; i < 12; i++) {
-            if (i != 11) {
-                source.append(data[i]).append(":");
-            }
-            else {
-                source.append(data[i]);
-            }
-        }
-
-        int version = Integer.parseInt(String.valueOf(data[14].charAt(0)));
-        int headerLength = Integer.parseInt(String.valueOf(data[14].charAt(1))) * 4;
-        int totalLength = Integer.parseInt(data[16] + data[17], 16);
-        String typeOfService = "0x" + data[15];
-        String etherType = data[12] + data[13];
-        String identification = Integer.parseInt(data[18] + data[19], 16) + "";
-        String flags = "0x" + Integer.parseInt(data[20], 16);
-        int fragmentOffset = Integer.parseInt(data[21], 16);
-        int timeToLive = Integer.parseInt(data[22], 16);
-        int protocol = Integer.parseInt(data[23], 16);
-        String headerChecksum = "0x" + data[24] + data[25];
-        StringBuilder src = new StringBuilder();
-        StringBuilder dst = new StringBuilder();
-        for (int i = 26; i < 30; i++) {
-            if (i != 29) {
-                src.append(Integer.parseInt(data[i], 16)).append(".");
-            }
-            else {
-                src.append(Integer.parseInt(data[i], 16));
-            }
-        }
-        for (int i = 30; i < 34; i++) {
-            if (i != 33) {
-                dst.append(Integer.parseInt(data[i], 16)).append(".");
-            }
-            else {
-                dst.append(Integer.parseInt(data[i], 16));
-            }
-        }
-
-        printEther(packetSize, destination.toString(), source.toString(), etherType);
-        printIpHeader(version, headerLength, typeOfService, totalLength, identification, flags, fragmentOffset, timeToLive, protocol, headerChecksum, src.toString(), dst.toString());
-        if (protocol == 17) {
-            String UDPSource = Integer.parseInt(data[34] + data[35], 16) + "";
-            String UDPDest = Integer.parseInt(data[36] + data[37], 16) + "";
-            int length = Integer.parseInt(data[38] + data[39], 16);
-            String UDPChecksum = "0x" + data[40] + data[41];
-            String[] UDPData;
-            if (34 + 64 > data.length) {
-                UDPData = Arrays.copyOfRange(data, 34, data.length);
-            }
-            else {
-                UDPData = Arrays.copyOfRange(data, 34, 34 + 64);
-            }
-            printUdpHeader(UDPSource, UDPDest, length, UDPChecksum, UDPData);
-
-        }
-        else if (protocol == 6) {
-            String TCPSource = Integer.parseInt(data[34] + data[35], 16) + "";
-            String TCPDest = Integer.parseInt(data[36] + data[37], 16) + "";
-            StringBuilder sequenceNumberS = new StringBuilder();
-            for (int i = 38; i < 42; i++) {
-                sequenceNumberS.append(data[i]);
-            }
-            String sequenceNumber = Integer.parseInt(sequenceNumberS.toString(), 16) + "";
-            StringBuilder acknowledgementNumberS = new StringBuilder();
-            for (int i = 42; i < 46; i++) {
-                acknowledgementNumberS.append(data[i]);
-            }
-            String acknowledgementNumber = acknowledgementNumberS.toString();
-            int dataOffset = Integer.parseInt(String.valueOf(data[46].charAt(0)));
-            String tcpFlag = data[46].charAt(1) + data[47];
-            String window = Integer.parseInt(data[48] + data[49], 16) + "";
-            String checkSum = "0x" + data[50] + data[51];
-            int urgentPointer = Integer.parseInt(data[52],16);
-            String[] tcpData;
-            if (34 + 64 > data.length) {
-                tcpData = Arrays.copyOfRange(data, 34, data.length);
-            }
-            else {
-                tcpData = Arrays.copyOfRange(data, 34, 34 + 64);
-            }
-            printTcpHeader(TCPSource, TCPDest, sequenceNumber, acknowledgementNumber, dataOffset, tcpFlag, window, checkSum, urgentPointer, tcpData);
-        }
-        else if (protocol == 1) {
-            int type = Integer.parseInt(data[34], 16);
-            int code = Integer.parseInt(String.valueOf(data[35].charAt(0)), 16);
-            String checkSum = data[35].charAt(1) + data[36] + data[37];
-            printICMPHeader(type, code, checkSum);
-        }
-        else {
-            System.out.println("----Unknown Protocol----");
         }
     }
 }
