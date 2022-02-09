@@ -1,10 +1,10 @@
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.io.IOException;
 
-public class ReadFile {
+public class PacketAnalyzer {
 
     private static void printEther(int packetSize, String destination, String source, String etherType) {
         System.out.println("ETHER: ------Ether Header------");
@@ -24,7 +24,7 @@ public class ReadFile {
     private static void printIpHeader(int version, int headerLength, String typeOfService,
                                       int totalLength, String identification, String flags,
                                       int fragmentOffset, int timeToLive, int protocol,
-                                      String headerCheckSum, String source, String destination) {
+                                      String headerCheckSum, String source, String destination, boolean hasOption) {
         System.out.println("IP: \t----- IP Header -----");
         System.out.println("IP:");
         System.out.println("IP: \tVersion = " + version);
@@ -48,6 +48,12 @@ public class ReadFile {
         System.out.println("IP: \tHeader checksum = " + headerCheckSum);
         System.out.println("IP: \tSource Address = " + source);
         System.out.println("IP: \tDestination Address = " + destination);
+        if (hasOption) {
+            System.out.println("IP: \tOptions: Yes");
+        }
+        else {
+            System.out.println("IP: \tOptions: No");
+        }
         System.out.println("IP: \t");
     }
 
@@ -179,6 +185,7 @@ public class ReadFile {
             String headerChecksum = "0x" + data[24] + data[25];
             StringBuilder src = new StringBuilder();
             StringBuilder dst = new StringBuilder();
+            boolean hasOption = headerLength > 20;
             for (int i = 26; i < 30; i++) {
                 if (i != 29) {
                     src.append(Integer.parseInt(data[i], 16)).append(".");
@@ -197,7 +204,9 @@ public class ReadFile {
             }
 
             printEther(packetSize, destination.toString(), source.toString(), etherType);
-            printIpHeader(version, headerLength, typeOfService, totalLength, identification, flags, fragmentOffset, timeToLive, protocol, headerChecksum, src.toString(), dst.toString());
+            printIpHeader(version, headerLength, typeOfService, totalLength, identification,
+                    flags, fragmentOffset, timeToLive, protocol, headerChecksum, src.toString(),
+                    dst.toString(), hasOption);
             if (protocol == 17) {
                 String UDPSource = Integer.parseInt(data[34] + data[35], 16) + "";
                 String UDPDest = Integer.parseInt(data[36] + data[37], 16) + "";
@@ -250,8 +259,11 @@ public class ReadFile {
                 System.out.println("----Unknown Protocol----");
             }
         }
-        catch (Exception e) {
+        catch (IOException e) {
             System.out.println("File not found.");
         }
+	    catch (Exception e) {
+	    System.out.println("Error happened. Please try again, or read the README.txt file for running instruction");
+	    }
     }
 }
